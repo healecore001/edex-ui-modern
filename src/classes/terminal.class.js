@@ -3,11 +3,10 @@ class Terminal {
         if (opts.role === "client") {
             if (!opts.parentId) throw "Missing options";
 
-            this.xTerm = require("xterm").Terminal;
-            const {AttachAddon} = require("xterm-addon-attach");
-            const {FitAddon} = require("xterm-addon-fit");
-            const {LigaturesAddon} = require("xterm-addon-ligatures");
-            const {WebglAddon} = require("xterm-addon-webgl");
+            this.xTerm = require("@xterm/xterm").Terminal;
+            const {AttachAddon} = require("@xterm/addon-attach");
+            const {FitAddon} = require("@xterm/addon-fit");
+            const {WebglAddon} = require("@xterm/addon-webgl");
             this.Ipc = require("electron").ipcRenderer;
 
             this.port = opts.port || 3000;
@@ -102,7 +101,7 @@ class Terminal {
                 rows: 24,
                 cursorBlink: window.theme.terminal.cursorBlink || true,
                 cursorStyle: window.theme.terminal.cursorStyle || "block",
-                allowTransparency: window.theme.terminal.allowTransparency || false,
+                allowProposedApi: true,
                 fontFamily: window.theme.terminal.fontFamily || "Fira Mono",
                 fontSize: window.theme.terminal.fontSize || window.settings.termFontSize || 15,
                 fontWeight: window.theme.terminal.fontWeight || "normal",
@@ -139,8 +138,10 @@ class Terminal {
             this.term.loadAddon(fitAddon);
             this.term.open(document.getElementById(opts.parentId));
             this.term.loadAddon(new WebglAddon());
-            let ligaturesAddon = new LigaturesAddon();
-            this.term.loadAddon(ligaturesAddon);
+            // @xterm/addon-ligatures ships as an ES module only, so it is loaded asynchronously (optional feature)
+            import(new URL("node_modules/@xterm/addon-ligatures/lib/addon-ligatures.mjs", window.location.href).href)
+                .then(({LigaturesAddon}) => this.term.loadAddon(new LigaturesAddon()))
+                .catch(e => console.error("Ligatures addon unavailable:", e));
             this.term.attachCustomKeyEventHandler(e => {
                 window.keyboard.keydownHandler(e);
                 return true;
